@@ -1,13 +1,17 @@
 package org.desafio.controller;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
+import io.swagger.models.auth.In;
 import org.desafio.model.Aluno;
 import org.desafio.model.Avaliacao;
 import org.desafio.model.Instrutor;
 import org.desafio.repository.AlunoRepository;
 import org.desafio.repository.CursoRepository;
 import org.desafio.repository.InstrutorRepository;
+import org.hibernate.Criteria;
+import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -190,14 +194,23 @@ public class CursoController {
 	@ResponseStatus(HttpStatus.ACCEPTED)
 	public ResponseEntity popularMatricula() {
 		List<Curso> cursos = _cursoRepository.findAll();
-		if(cursos.size() > 5) {
-			List<Curso> cursosMaisMatriculas = new ArrayList<>();
-			for(Curso c : cursos) {
+		Map<Long, Integer> numMatriculas = new HashMap<>();
 
-			}
-			return ResponseEntity.status(HttpStatus.CREATED).body(cursosMaisMatriculas);
-		} else {
-			return ResponseEntity.status(HttpStatus.CREATED).body(cursos);
+		for(Curso c : cursos) {
+			numMatriculas.put(c.getId(), _cursoRepository.getNumMatriculas(c.getId()));
 		}
+
+		//ordena o map em ordem decrescente
+		Map<Long, Integer> numMatriculasOrd = numMatriculas.entrySet()
+			.stream()
+			.sorted((Map.Entry.<Long, Integer>comparingByValue().reversed()))
+			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
+
+		//pega apenas o id dos cursos e os adiciona em uma lista
+		ArrayList<Curso> cursosOrd = new ArrayList<>();
+		numMatriculasOrd.forEach((key, value) -> cursosOrd.add(_cursoRepository.getById(key)));
+
+		//pega apenas o 5 primeiros valores da lista
+		return ResponseEntity.status(HttpStatus.CREATED).body(cursosOrd.stream().limit(5).collect(Collectors.toList()));
 	}
 }
